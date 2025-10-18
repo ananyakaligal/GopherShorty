@@ -1,7 +1,11 @@
 package routes
 
 import (
+	"/helpers" // use your actual module path
 	"time"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/gofiber/fiber/v2"
 )
 
 type request struct {
@@ -16,4 +20,30 @@ type response struct {
 	Expiry          time.Duration `json:"expiry"`
 	XRateRemaining  int           `json:"rate_limit"`
 	XRateLimitReset time.Duration `json:"rate_limit_reset"`
+}
+
+func ShortenURL(c *fiber.Ctx) error {
+	body := new(request)
+
+	if err := c.BodyParser(body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse JSON"})
+	}
+
+	// Check if the input sent by user is an actual URL
+	if !govalidator.IsURL(body.URL) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid URL"})
+	}
+
+	// IMPLEMENT RATE LIMITING
+
+	// CHECK FOR DOMAIN ERROR
+	if !helpers.RemoveDomainError(body.URL) {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "URL cannot be your own domain"})
+	}
+
+	// ENFORCE HTTP/HTTPS
+	body.URL = helpers.EnforceHTTP(body.URL)
+
+	// ...rest of your code (shorten url, respond, etc.)
+	return c.JSON(fiber.Map{"message": "URL validated and accepted"})
 }
